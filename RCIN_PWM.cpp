@@ -5,7 +5,15 @@
 // Initialize static array to store instances for each 8 channels
 RCIN_PWM* RCIN_PWM::_instances[8] = {nullptr};
 
-bool RCIN_PWM::_calibrationFlag = false;
+bool RCIN_PWM::calibrationFlag = false;
+
+float RCIN_PWM::ParametersStruct::FILTER_FRQ = 0;
+
+float RCIN_PWM::ParametersStruct::UPDATE_FRQ = 0;
+
+float RCIN_PWM::_alpha = 0;
+
+volatile unsigned long RCIN_PWM::_T = 0;
 
 // ##########################################################################
 // General function definitions:
@@ -132,8 +140,6 @@ RCIN_PWM::RCIN_PWM()
 		
 		parameters.MAP_MIN = 1000.0;
     parameters.MAP_MAX = 2000.0;					
-		parameters.FILTER_FRQ = 0;
-		parameters.UPDATE_FRQ = 0;
     parameters.RAW_MIN = 1000;
     parameters.RAW_MAX = 2000;
     parameters.RAW_MID = 1500;
@@ -145,7 +151,6 @@ RCIN_PWM::RCIN_PWM()
     value.maped = 0;
     value.filtered = 0;
 
-		_alpha = 0;
     _T = 0;
     _attachedFlag = false;
 }
@@ -195,7 +200,14 @@ bool RCIN_PWM::detach(void)
 
 uint16_t RCIN_PWM::_map(void)
 {
-	value.maped = map(value.raw,parameters.RAW_MIN,parameters.RAW_MAX,parameters.MAP_MIN,parameters.MAP_MAX);
+  if(abs(value.raw - parameters.RAW_MID) > parameters.DEADZONE )
+  {
+    value.maped = map(value.raw,parameters.RAW_MIN,parameters.RAW_MAX,parameters.MAP_MIN,parameters.MAP_MAX);
+  }
+  else
+  {
+    value.maped = map(parameters.RAW_MID,parameters.RAW_MIN,parameters.RAW_MAX,parameters.MAP_MIN,parameters.MAP_MAX);
+  }
 
   if(value.maped > parameters.MAP_MAX)
   {
@@ -250,7 +262,7 @@ bool RCIN_PWM::setFilterFrequency(float frq)
     errorMessage = "Error RCIN_PWM: filter frequency can not be negative.";
     return false;
   }
-	parameters.FILTER_FRQ = frq;
+	RCIN_PWM::parameters.FILTER_FRQ = frq;
 }
 
 bool RCIN_PWM::setUpdateFrequency(float frq)
@@ -261,12 +273,12 @@ bool RCIN_PWM::setUpdateFrequency(float frq)
     return false;
   }
 
-	parameters.UPDATE_FRQ = frq;
+	RCIN_PWM::parameters.UPDATE_FRQ = frq;
 }
 
 void RCIN_PWM::startCalibration(void)
 {
-	RCIN_PWM::_calibrationFlag = true;
+	RCIN_PWM::calibrationFlag = true;
 
   for(int i = 1; i <= 8; i++)
   {
@@ -280,7 +292,7 @@ void RCIN_PWM::startCalibration(void)
 
 void RCIN_PWM::stopCalibration(void)
 {
-	RCIN_PWM::_calibrationFlag = false;	
+	RCIN_PWM::calibrationFlag = false;	
 
   for(int i = 1; i <= 8; i++)
   {
@@ -296,52 +308,52 @@ void RCIN_PWM::update(void)
 	unsigned long t = micros();
   unsigned long dt = t - _T;
 
-  if(parameters.UPDATE_FRQ > 0)
+  if(RCIN_PWM::ParametersStruct::UPDATE_FRQ > 0)
   {
-    if(dt < (1000000.0/parameters.UPDATE_FRQ))
+    if(dt < (1000000.0/RCIN_PWM::ParametersStruct::UPDATE_FRQ))
     {
       return ;
     }
   }
 
-  if(parameters.FILTER_FRQ > 0)
+  if(RCIN_PWM::ParametersStruct::FILTER_FRQ > 0)
   {
-    _alpha = 1.0 / (1.0 + _2PI * parameters.FILTER_FRQ * dt / 1000000.0);
+    RCIN_PWM::_alpha = 1.0 / (1.0 + _2PI * RCIN_PWM::ParametersStruct::FILTER_FRQ * dt / 1000000.0);
   }
   else
   {
-    _alpha = 0;
+    RCIN_PWM::_alpha = 0;
   }
 
   for(int i = 1; i <= 8; i++)
   {
-    if(_attachedFlag == true)
+    if(_instances[i-1]->_attachedFlag == true)
     {
-      if(_calibrationFlag)
+      if(calibrationFlag)
       {
-        if(value.raw > parameters.RAW_MAX)
+        if(_instances[i-1]->value.raw > _instances[i-1]->parameters.RAW_MAX)
         {
-          parameters.RAW_MAX = value.raw;
+          _instances[i-1]->parameters.RAW_MAX = _instances[i-1]->value.raw;
         }
-        if(value.raw < parameters.RAW_MIN)
+        if(_instances[i-1]->value.raw < _instances[i-1]->parameters.RAW_MIN)
         {
-          parameters.RAW_MIN = value.raw;
+          _instances[i-1]->parameters.RAW_MIN = _instances[i-1]->value.raw;
         }
 
-        value.maped = value.raw;
+        _instances[i-1]->value.maped = _instances[i-1]->value.raw;
       }
       else
       {
-        _map();
+        _instances[i-1]->_map();
       }
       
-      if(parameters.FILTER_FRQ > 0)
+      if(_instances[i-1]->parameters.FILTER_FRQ > 0)
       {
-        value.filtered = _alpha * value.filtered + (1.0 - _alpha) * value.maped;
+        _instances[i-1]->value.filtered = _alpha * _instances[i-1]->value.filtered + (1.0 - _alpha) * _instances[i-1]->value.maped;
       }
       else
       {
-        value.filtered = value.maped;
+        _instances[i-1]->value.filtered = _instances[i-1]->value.maped;
       }
     }
   }	
@@ -406,7 +418,14 @@ bool RCIN_PWM::_checkParameters(void)
 {
   bool state = (parameters.FILTER_FRQ >= 0) && (parameters.MAP_MAX > parameters.MAP_MIN) &&
                (parameters.RAW_MAX > parameters.RAW_MIN) && (parameters.RAW_MID > parameters.RAW_MIN) &&
-               (parameters.RAW_MID < parameters.RAW_MAX) && (parameters.UPDATE_FRQ >= 0) ;
+               (parameters.RAW_MID < parameters.RAW_MAX) && (parameters.UPDATE_FRQ >= 0) &&
+               (parameters.PIN_NUM >= 0) && (parameters.CHANNEL_NUM >= 1) && (parameters.CHANNEL_NUM <= 8) ;
 
-  return state;
+  if(state == false)
+  {
+    errorMessage = "Error RCIN_PWM: One or some parameters is not correct.";
+    return false;
+  }
+
+  return true;
 }

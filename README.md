@@ -82,15 +82,3 @@ https://github.com/NicoHood/PinChangeInterrupt
   - ATmega48/88/168/328/328PB: All pins are usable     
 
   ----------------------------------------------------------------------------------------------
-
-## Singleton pattern
-
-  To modify the RCIN_PWM_CLASS so that only one instance of this class can be created (implementing the Singleton pattern), we'll make the following changes:
-
-  - Private Constructor: Make the constructor of the RCIN_PWM_CLASS private to prevent creating instances using the new keyword or normal instantiation.
-
-  - Delete Copy Constructor and Assignment Operator: To prevent copying the Singleton instance.
-
-  - Static Method for Access: Implement a static method (getInstance) to provide a global access point to the single instance of the class.
-
-  - Static Private Instance: Use a private static pointer to hold the single instance of the class.

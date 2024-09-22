@@ -41,6 +41,9 @@ class RCIN_PWM
     // Last error accured for object.
     String errorMessage;
 
+    // Flag for active/inactive calibration process.
+    static bool calibrationFlag;
+
     // Parameters struct
     struct ParametersStruct
     {
@@ -54,10 +57,10 @@ class RCIN_PWM
       uint16_t DEADZONE;
 
       // [Hz]. Low pass filter frequency(Cutoff filter frequency). **Hint: 0 value means disable it.
-      float FILTER_FRQ;
+      static float FILTER_FRQ;
 
       // Update method frequency. This value insure that RC maped/filtered values just update in certain frequency. **Hint: 0 value means disable it.
-      float UPDATE_FRQ;
+      static float UPDATE_FRQ;
 
       // Digital pin number of arduino that used for input pwm signal.
       // -1 value means no pin.
@@ -156,12 +159,9 @@ class RCIN_PWM
     /**
      * update and calculate maped/filtered pwm value.
      */
-    void update(void);
+    static void update(void);
 
   private:
-
-    // Flag for active/inactive calibration process.
-    static bool _calibrationFlag;
 
     // Static array to store instances per channel
     // Array to hold one object per channel (1-8)
@@ -181,13 +181,14 @@ class RCIN_PWM
     
     // Gain that used at low pass filter calculations.
     // _alpha = 1.0 / (1.0 + _2PI * parameters.FILTER_FRQ / UPDATE_FRQ)
-    float _alpha;
+    static float _alpha;
     
     // [us]. Time at update() method.
-    volatile unsigned long _T;
+    static volatile unsigned long _T;
 
     /**
-    *
+    * Calculate pwm maped value.
+    * @return PWM maped value.
     */
     uint16_t _map(void);
 
