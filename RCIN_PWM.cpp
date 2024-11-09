@@ -5,11 +5,13 @@
 // Initialize static array to store instances for each 8 channels
 RCIN_PWM* RCIN_PWM::_instances[8] = {nullptr};
 
-bool RCIN_PWM::calibrationFlag = false;
+bool RCIN_PWM::StaticParameters::CALIBRATION_FLAG = false;
 
-float RCIN_PWM::ParametersStruct::FILTER_FRQ = 0;
+float RCIN_PWM::StaticParameters::FILTER_FRQ = 0;
 
-float RCIN_PWM::ParametersStruct::UPDATE_FRQ = 0;
+float RCIN_PWM::StaticParameters::UPDATE_FRQ = 0;
+
+String RCIN_PWM::errorMessage = "";
 
 float RCIN_PWM::_alpha = 0;
 
@@ -158,45 +160,11 @@ RCIN_PWM::RCIN_PWM()
 // Destructor
 RCIN_PWM::~RCIN_PWM() 
 {
-    // Detach interrupt when the object is destroyed
-    detachInterrupt(digitalPinToInterrupt(parameters.PIN_NUM));
-}
-
-bool RCIN_PWM::attach(uint8_t channel_number, uint8_t pin_number)
-{	
-  if( (channel_number > 8) || (channel_number == 0) )
-  {
-    errorMessage = "Error RCIN_PWM: channel number is not correct.";
-    return false;
-  }
-
-  if (_instances[channel_number - 1] != nullptr) 
-  {
-      // Detach any existing object for this channel
-      _instances[channel_number - 1]->detach();
-      delete _instances[channel_number - 1];
-  }
-
-  // Create a new object for this channel
-  _instances[channel_number - 1] = this;
-
-  parameters.CHANNEL_NUM = channel_number;
-  parameters.PIN_NUM = pin_number;
-  _attachedFlag = true;
-  
-  return true;
-}
-
-// Static function to detach a channel and remove the object
-bool RCIN_PWM::detach(void) 
-{
   // Detach the interrupt and delete the object
   detachInterrupt(digitalPinToInterrupt(parameters.PIN_NUM));
   _instances[parameters.CHANNEL_NUM - 1] = nullptr;
   _attachedFlag = false;
-  return true;
 }
-
 
 uint16_t RCIN_PWM::_map(void)
 {
@@ -262,7 +230,8 @@ bool RCIN_PWM::setFilterFrequency(float frq)
     errorMessage = "Error RCIN_PWM: filter frequency can not be negative.";
     return false;
   }
-	RCIN_PWM::parameters.FILTER_FRQ = frq;
+
+	RCIN_PWM::StaticParameters::FILTER_FRQ = frq;
 }
 
 bool RCIN_PWM::setUpdateFrequency(float frq)
@@ -273,12 +242,12 @@ bool RCIN_PWM::setUpdateFrequency(float frq)
     return false;
   }
 
-	RCIN_PWM::parameters.UPDATE_FRQ = frq;
+	RCIN_PWM::StaticParameters::UPDATE_FRQ = frq;
 }
 
 void RCIN_PWM::startCalibration(void)
 {
-	RCIN_PWM::calibrationFlag = true;
+	RCIN_PWM::StaticParameters::CALIBRATION_FLAG = true;
 
   for(int i = 1; i <= 8; i++)
   {
@@ -292,7 +261,7 @@ void RCIN_PWM::startCalibration(void)
 
 void RCIN_PWM::stopCalibration(void)
 {
-	RCIN_PWM::calibrationFlag = false;	
+	RCIN_PWM::StaticParameters::CALIBRATION_FLAG = false;	
 
   for(int i = 1; i <= 8; i++)
   {
@@ -308,17 +277,17 @@ void RCIN_PWM::update(void)
 	unsigned long t = micros();
   unsigned long dt = t - _T;
 
-  if(RCIN_PWM::ParametersStruct::UPDATE_FRQ > 0)
+  if(RCIN_PWM::StaticParameters::UPDATE_FRQ > 0)
   {
-    if(dt < (1000000.0/RCIN_PWM::ParametersStruct::UPDATE_FRQ))
+    if(dt < (1000000.0/RCIN_PWM::StaticParameters::UPDATE_FRQ))
     {
       return ;
     }
   }
 
-  if(RCIN_PWM::ParametersStruct::FILTER_FRQ > 0)
+  if(RCIN_PWM::StaticParameters::FILTER_FRQ > 0)
   {
-    RCIN_PWM::_alpha = 1.0 / (1.0 + _2PI * RCIN_PWM::ParametersStruct::FILTER_FRQ * dt / 1000000.0);
+    RCIN_PWM::_alpha = 1.0 / (1.0 + _2PI * RCIN_PWM::StaticParameters::FILTER_FRQ * dt / 1000000.0);
   }
   else
   {
@@ -329,7 +298,7 @@ void RCIN_PWM::update(void)
   {
     if(_instances[i-1]->_attachedFlag == true)
     {
-      if(calibrationFlag)
+      if(RCIN_PWM::StaticParameters::CALIBRATION_FLAG)
       {
         if(_instances[i-1]->value.raw > _instances[i-1]->parameters.RAW_MAX)
         {
@@ -347,7 +316,7 @@ void RCIN_PWM::update(void)
         _instances[i-1]->_map();
       }
       
-      if(_instances[i-1]->parameters.FILTER_FRQ > 0)
+      if(_instances[i-1]->staticParameters.FILTER_FRQ > 0)
       {
         _instances[i-1]->value.filtered = _alpha * _instances[i-1]->value.filtered + (1.0 - _alpha) * _instances[i-1]->value.maped;
       }
@@ -369,57 +338,70 @@ bool RCIN_PWM::init(void)
     return false;
   }
 
-  if( (_attachedFlag == true) && (parameters.PIN_NUM >= 0) )
-  {
-    pinMode(parameters.PIN_NUM,INPUT_PULLUP);
-    
-    _funPointer = nullptr;
-    
-    switch(parameters.CHANNEL_NUM)
-    {
-      case 1:
-        _funPointer = _calcInput_CH1;
-      break;
-      case 2:
-        _funPointer = _calcInput_CH2;
-      break;
-      case 3:
-        _funPointer = _calcInput_CH3;
-      break;
-      case 4:
-        _funPointer = _calcInput_CH4;
-      break;
-      case 5:
-        _funPointer = _calcInput_CH5;
-      break;
-      case 6:
-        _funPointer = _calcInput_CH6;
-      break;
-      case 7:
-        _funPointer = _calcInput_CH7;
-      break;
-      case 8:
-        _funPointer = _calcInput_CH8;
-      break;		
-    }
-
-    attachInterrupt(digitalPinToInterrupt(parameters.PIN_NUM), _funPointer, CHANGE);
-  }
-  else
-  {
-    _attachedFlag = false;
-  }
+  pinMode(parameters.PIN_NUM,INPUT_PULLUP);
   
+  _funPointer = nullptr;
+  
+  switch(parameters.CHANNEL_NUM)
+  {
+    case 1:
+      _funPointer = _calcInput_CH1;
+    break;
+    case 2:
+      _funPointer = _calcInput_CH2;
+    break;
+    case 3:
+      _funPointer = _calcInput_CH3;
+    break;
+    case 4:
+      _funPointer = _calcInput_CH4;
+    break;
+    case 5:
+      _funPointer = _calcInput_CH5;
+    break;
+    case 6:
+      _funPointer = _calcInput_CH6;
+    break;
+    case 7:
+      _funPointer = _calcInput_CH7;
+    break;
+    case 8:
+      _funPointer = _calcInput_CH8;
+    break;		
+  }
+
+  attachInterrupt(digitalPinToInterrupt(parameters.PIN_NUM), _funPointer, CHANGE);
+
+  // Store object address in _instances array.
+  _instances[parameters.CHANNEL_NUM - 1] = this;
+  _attachedFlag = true;
 
   return true;
 }
 
 bool RCIN_PWM::_checkParameters(void)
 {
-  bool state = (parameters.FILTER_FRQ >= 0) && (parameters.MAP_MAX > parameters.MAP_MIN) &&
+  if( (parameters.CHANNEL_NUM > 8) || (parameters.CHANNEL_NUM == 0) )
+  {
+    errorMessage = "Error RCIN_PWM: Channel number is not correct.";
+    return false;
+  }
+
+  if (_instances[parameters.CHANNEL_NUM - 1] != nullptr) 
+  {
+    errorMessage = "Error RCIN_PWM: The channel number is occupied by another object. Please select another channel.";
+    return false;
+    /*
+      // Detach any existing object for this channel
+      _instances[channel_number - 1]->detach();
+      delete _instances[channel_number - 1];
+    */
+  }
+
+  bool state = (StaticParameters::FILTER_FRQ >= 0) && (parameters.MAP_MAX > parameters.MAP_MIN) &&
                (parameters.RAW_MAX > parameters.RAW_MIN) && (parameters.RAW_MID > parameters.RAW_MIN) &&
-               (parameters.RAW_MID < parameters.RAW_MAX) && (parameters.UPDATE_FRQ >= 0) &&
-               (parameters.PIN_NUM >= 0) && (parameters.CHANNEL_NUM >= 1) && (parameters.CHANNEL_NUM <= 8) ;
+               (parameters.RAW_MID < parameters.RAW_MAX) && (StaticParameters::UPDATE_FRQ >= 0) &&
+               (parameters.PIN_NUM >= 0);
 
   if(state == false)
   {
