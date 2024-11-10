@@ -1,5 +1,7 @@
 #include "RCIN_PWM.h"
 
+using namespace RCIN_PWM_Namespace;
+
 #define _2PI  6.2831853
 
 // Initialize static array to store instances for each 8 channels
@@ -20,7 +22,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
 // ##########################################################################
 // General function definitions:
 
- void _calcInput_CH1(void)
+void RCIN_PWM_Namespace::_calcInput_CH1(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[0]->parameters.PIN_NUM) == HIGH)
@@ -34,7 +36,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH2(void)
+void RCIN_PWM_Namespace::_calcInput_CH2(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[1]->parameters.PIN_NUM) == HIGH)
@@ -48,7 +50,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH3(void)
+void RCIN_PWM_Namespace::_calcInput_CH3(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[2]->parameters.PIN_NUM) == HIGH)
@@ -62,7 +64,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH4(void)
+void RCIN_PWM_Namespace::_calcInput_CH4(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[3]->parameters.PIN_NUM) == HIGH)
@@ -76,7 +78,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH5(void)
+void RCIN_PWM_Namespace::_calcInput_CH5(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[4]->parameters.PIN_NUM) == HIGH)
@@ -90,7 +92,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH6(void)
+void RCIN_PWM_Namespace::_calcInput_CH6(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[5]->parameters.PIN_NUM) == HIGH)
@@ -104,7 +106,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH7(void)
+void RCIN_PWM_Namespace::_calcInput_CH7(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[6]->parameters.PIN_NUM) == HIGH)
@@ -118,7 +120,7 @@ volatile unsigned long RCIN_PWM::_T = 0;
   }
 }
 
- void _calcInput_CH8(void)
+void RCIN_PWM_Namespace::_calcInput_CH8(void)
 {
   // if the pin is high, its the start of an interrupt
   if(digitalRead(RCIN_PWM::_instances[7]->parameters.PIN_NUM) == HIGH)

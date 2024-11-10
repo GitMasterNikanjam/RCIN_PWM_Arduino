@@ -13,6 +13,18 @@
 // ###################################################################################
 //  General function declarations:
 
+namespace RCIN_PWM_Namespace
+{
+  void _calcInput_CH1(void);      ///! @brief Interrupt handler function for RCIN channel 1.
+  void _calcInput_CH2(void);      ///! @brief Interrupt handler function for RCIN channel 2.
+  void _calcInput_CH3(void);      ///! @brief Interrupt handler function for RCIN channel 3.
+  void _calcInput_CH4(void);      ///! @brief Interrupt handler function for RCIN channel 4.
+  void _calcInput_CH5(void);      ///! @brief Interrupt handler function for RCIN channel 5.
+  void _calcInput_CH6(void);      ///! @brief Interrupt handler function for RCIN channel 6.
+  void _calcInput_CH7(void);      ///! @brief Interrupt handler function for RCIN channel 7.
+  void _calcInput_CH8(void);      ///! @brief Interrupt handler function for RCIN channel 8.
+}
+
 // ##################################################################################3
 // RCIN class
 
@@ -216,28 +228,28 @@ class RCIN_PWM
     // Friend functions:
 
     /// @brief Interrupt handler function for RCIN channel 1.
-    friend void _calcInput_CH1(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH1(void);
 
     /// @brief Interrupt handler function for RCIN channel 2.
-    friend void _calcInput_CH2(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH2(void);
 
     /// @brief Interrupt handler function for RCIN channel 3.
-    friend void _calcInput_CH3(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH3(void);
 
     /// @brief Interrupt handler function for RCIN channel 4.
-    friend void _calcInput_CH4(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH4(void);
 
     /// @brief Interrupt handler function for RCIN channel 5.
-    friend void _calcInput_CH5(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH5(void);
 
     /// @brief Interrupt handler function for RCIN channel 6.
-    friend void _calcInput_CH6(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH6(void);
 
     /// @brief Interrupt handler function for RCIN channel 7.
-    friend void _calcInput_CH7(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH7(void);
 
     /// @brief Interrupt handler function for RCIN channel 8.
-    friend void _calcInput_CH8(void);
+    friend void RCIN_PWM_Namespace::_calcInput_CH8(void);
     
 };
 
